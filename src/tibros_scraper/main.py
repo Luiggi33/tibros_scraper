@@ -10,8 +10,7 @@ from selenium.webdriver.support import expected_conditions as ec
 
 from bs4 import BeautifulSoup
 
-logging.basicConfig(level=logging.WARNING,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def parse_exam_results(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
@@ -120,7 +119,6 @@ def get_exam_results():
             logging.info("Closing browser")
             driver.quit()
 
-
 def main():
     try:
         logging.info("Starting script")
@@ -134,7 +132,6 @@ def main():
             logging.warning("No results found or an error occurred")
     except Exception as e:
         logging.error(f"Script failed: {e}")
-
 
 if __name__ == "__main__":
     main()
