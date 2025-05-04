@@ -13,10 +13,14 @@ dependencies = [
 ]
 
 [tool.poetry]
+name = "tibros_scraper"
 packages = [{include = "tibros_scraper", from = "src"}]
 
 [tool.poetry.scripts]
 tibros_scraper = 'tibros_scraper.main:main'
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.5"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
