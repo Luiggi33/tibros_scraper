@@ -1,20 +1,16 @@
-[project]
-name = "tibros-scraper"
-version = "0.1.0"
-description = ""
-authors = [
-    {name = "Luiggi33",email = "github@luiggi33.de"}
-]
-readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "selenium (>=4.32.0,<5.0.0)",
-    "beautifulsoup4 (>=4.13.4,<5.0.0)"
-]
-
 [tool.poetry]
 name = "tibros_scraper"
+version = "0.1.0"
+description = "IHK tibros exam results scraper"
+authors = ["Luiggi33 <github@luiggi33.de>"]
+readme = "README.md"
 packages = [{include = "tibros_scraper", from = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+selenium = ">=4.32.0,<5.0.0"
+beautifulsoup4 = ">=4.13.4,<5.0.0"
+poetry-core = ">=2.0.0,<3.0.0"
 
 [tool.poetry.scripts]
 tibros_scraper = 'tibros_scraper.main:main'
