@@ -62,8 +62,11 @@ def get_exam_results():
     username = os.environ.get('IHK_AZUBINUMBER')
     password = os.environ.get('IHK_AZUBIPASSWORD')
 
-    driver = None
+    if not username or not password:
+        logging.warning("No IHK username and IHK password found!")
+        return []
 
+    driver = None
     try:
         logging.info("Initializing Chrome driver")
         driver = webdriver.Chrome(options=chrome_options)
