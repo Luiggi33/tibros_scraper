@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "IHK tibros exam results scraper"
 authors = ["Luiggi33 <github@luiggi33.de>"]
 readme = "README.md"
+package-mode = false
 packages = [{include = "tibros_scraper", from = "src"}]
 
 [tool.poetry.dependencies]
