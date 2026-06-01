@@ -68,6 +68,38 @@ def build_webhook_request_url(webhook_url, message_id=None):
     return urlunsplit((parsed_url.scheme, parsed_url.netloc, path, urlencode(query_params), ''))
 
 
+def build_chrome_options():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0")
+
+    chrome_binary_location = os.environ.get('CHROME_BINARY_LOCATION')
+    if chrome_binary_location:
+        chrome_options.binary_location = chrome_binary_location
+
+    return chrome_options
+
+
+def create_webdriver():
+    chrome_options = build_chrome_options()
+    remote_url = os.environ.get('SELENIUM_REMOTE_URL')
+
+    if remote_url:
+        logging.info('Using remote Selenium WebDriver at %s', remote_url)
+        return webdriver.Remote(command_executor=remote_url, options=chrome_options)
+
+    chromedriver_path = os.environ.get('CHROMEDRIVER_PATH')
+    chrome_service = Service(chromedriver_path) if chromedriver_path else None
+
+    if chrome_service:
+        return webdriver.Chrome(service=chrome_service, options=chrome_options)
+
+    return webdriver.Chrome(options=chrome_options)
+
+
 def send_discord_webhook(webhook_url, payload, message_id=None):
     target_url = build_webhook_request_url(webhook_url, message_id)
     method = 'POST'
@@ -143,17 +175,6 @@ def parse_exam_results(html_content):
 
 
 def get_exam_results():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0")
-
-    chrome_binary_location = os.environ.get('CHROME_BINARY_LOCATION')
-    if chrome_binary_location:
-        chrome_options.binary_location = chrome_binary_location
-
     username = os.environ.get('IHK_AZUBINUMBER')
     password = os.environ.get('IHK_AZUBIPASSWORD')
 
@@ -164,13 +185,7 @@ def get_exam_results():
     driver = None
     try:
         logging.info("Initializing Chrome driver")
-        chromedriver_path = os.environ.get('CHROMEDRIVER_PATH')
-        chrome_service = Service(chromedriver_path) if chromedriver_path else None
-
-        if chrome_service:
-            driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
-        else:
-            driver = webdriver.Chrome(options=chrome_options)
+        driver = create_webdriver()
 
         logging.info("Navigating to login page")
         driver.get(IHK_RESULTS_URL)

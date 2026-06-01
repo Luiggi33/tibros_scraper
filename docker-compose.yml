@@ -1,0 +1,13 @@
+services:
+  selenium:
+    image: selenium/standalone-chrome:latest
+    shm_size: 2gb
+    ports:
+      - "4444:4444"
+
+  scraper:
+    image: ghcr.io/luiggi33/tibros-scraper:latest
+    depends_on:
+      - selenium
+    environment:
+      SELENIUM_REMOTE_URL: http://selenium:4444

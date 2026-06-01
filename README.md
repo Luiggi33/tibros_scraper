@@ -48,24 +48,24 @@ poetry run pytest -v
 
 ## Docker Support
 
-You can also build and run the scraper using Docker:
+The recommended container setup runs the scraper and a Selenium Chrome container together.
 
-1. Build the Docker image:
+1. Set the required environment variables:
    ```bash
-   docker build -t tibros-scraper .
+   export IHK_AZUBINUMBER="your_username"
+   export IHK_AZUBIPASSWORD="your_password"
+   export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/.../..."
+   export DISCORD_WEBHOOK_MESSAGE_ID="123456789012345678"
    ```
 
-2. Run the container:
+2. Start both containers:
    ```bash
-   docker run \
-     -e IHK_AZUBINUMBER="your_username" \
-     -e IHK_AZUBIPASSWORD="your_password" \
-     -e DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/.../..." \
-     -e DISCORD_WEBHOOK_MESSAGE_ID="123456789012345678" \
-     tibros-scraper
+   docker compose up --build
    ```
 
-   The `DISCORD_WEBHOOK_MESSAGE_ID` variable is optional; omit it if you want the webhook to create a new message each run.
+   The scraper container connects to the Selenium container through `SELENIUM_REMOTE_URL=http://selenium:4444`.
+
+If you run the scraper image against a Selenium service of your own, set `SELENIUM_REMOTE_URL` to that service's address. Outside Docker, if `SELENIUM_REMOTE_URL` is not set, the scraper falls back to a local Chrome driver.
 
 ## License
 

@@ -1,3 +1,5 @@
+from tibros_scraper import main
+
 from tibros_scraper.main import build_discord_payload, parse_exam_results
 
 def test_parse_exam_results_with_valid_data():
@@ -97,3 +99,51 @@ def test_build_discord_payload_uses_labels_and_scores():
             'inline': True,
         },
     ]
+
+
+def test_create_webdriver_uses_remote_selenium(monkeypatch):
+    captured = {}
+
+    class DummyDriver:
+        pass
+
+    def fake_remote(*, command_executor, options):
+        captured['command_executor'] = command_executor
+        captured['options'] = options
+        return DummyDriver()
+
+    def fail_local(*args, **kwargs):
+        raise AssertionError('local Chrome driver should not be used when SELENIUM_REMOTE_URL is set')
+
+    monkeypatch.setenv('SELENIUM_REMOTE_URL', 'http://selenium:4444')
+    monkeypatch.delenv('CHROMEDRIVER_PATH', raising=False)
+    monkeypatch.setattr(main.webdriver, 'Remote', fake_remote)
+    monkeypatch.setattr(main.webdriver, 'Chrome', fail_local)
+
+    driver = main.create_webdriver()
+
+    assert isinstance(driver, DummyDriver)
+    assert captured['command_executor'] == 'http://selenium:4444'
+    assert '--headless' in captured['options'].arguments
+
+
+def test_create_webdriver_uses_local_chromedriver_when_remote_is_unset(monkeypatch):
+    captured = {}
+
+    class DummyDriver:
+        pass
+
+    def fake_chrome(*, service, options):
+        captured['service'] = service
+        captured['options'] = options
+        return DummyDriver()
+
+    monkeypatch.delenv('SELENIUM_REMOTE_URL', raising=False)
+    monkeypatch.setenv('CHROMEDRIVER_PATH', '/usr/bin/chromedriver')
+    monkeypatch.setattr(main.webdriver, 'Chrome', fake_chrome)
+
+    driver = main.create_webdriver()
+
+    assert isinstance(driver, DummyDriver)
+    assert captured['service'].path == '/usr/bin/chromedriver'
+    assert '--disable-dev-shm-usage' in captured['options'].arguments
