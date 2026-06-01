@@ -41,7 +41,7 @@ def parse_exam_results(html_content):
             mark = note_col.get_text(strip=True)
 
             if label and not label_col.find('b'):
-                print(f"{label} | Points: {points} | Mark: {mark}")
+                logging.debug(f"{label} | Points: {points} | Mark: {mark}")
                 exam_results.append({
                     'label': label,
                     'points': points,
