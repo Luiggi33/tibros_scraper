@@ -9,5 +9,6 @@ services:
     image: ghcr.io/luiggi33/tibros-scraper:latest
     depends_on:
       - selenium
+    env_file: tibros.env
     environment:
       SELENIUM_REMOTE_URL: http://selenium:4444
