@@ -1,7 +1,9 @@
 import json
 import logging
 import os
+import hashlib
 import time
+from pathlib import Path
 from datetime import datetime, timezone
 from urllib.parse import urlencode, urlsplit, urlunsplit
 from urllib.error import HTTPError, URLError
@@ -30,7 +32,7 @@ def build_exam_field_value(result):
     return f"Points: {result['points']}\nMark: {result['mark']}"
 
 
-def build_discord_payload(exam_results, timestamp=None):
+def build_discord_payload(exam_results, timestamp=None, content=None, allowed_mentions=None):
     embed_fields = [
         {
             'name': result['label'],
@@ -40,7 +42,7 @@ def build_discord_payload(exam_results, timestamp=None):
         for result in exam_results
     ]
 
-    return {
+    payload = {
         'embeds': [
             {
                 'title': 'IHK Berlin | Prüfungsnoten',
@@ -51,6 +53,72 @@ def build_discord_payload(exam_results, timestamp=None):
             }
         ]
     }
+
+    if content:
+        payload['content'] = content
+
+    if allowed_mentions:
+        payload['allowed_mentions'] = allowed_mentions
+
+    return payload
+
+
+def build_discord_ping_payload(discord_user_id, message=None):
+    ping_message = message or 'Grades changed on IHK Berlin.'
+
+    return {
+        'content': f'<@{discord_user_id}> {ping_message}',
+        'allowed_mentions': {
+            'users': [discord_user_id],
+        },
+    }
+
+
+def normalize_exam_results(exam_results):
+    return [
+        {
+            'label': result['label'],
+            'points': result['points'],
+            'mark': result['mark'],
+        }
+        for result in sorted(exam_results, key=lambda result: (result['label'], result['points'], result['mark']))
+    ]
+
+
+def hash_exam_results(exam_results):
+    normalized_results = normalize_exam_results(exam_results)
+    encoded_results = json.dumps(normalized_results, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+    return hashlib.sha256(encoded_results).hexdigest()
+
+
+def load_grade_hash(snapshot_path):
+    try:
+        with open(snapshot_path, 'r', encoding='utf-8') as snapshot_file:
+            snapshot = snapshot_file.read().strip()
+
+        if snapshot:
+            return snapshot
+
+    except FileNotFoundError:
+        return None
+    except (OSError, json.JSONDecodeError) as error:
+        logging.warning('Could not read grade snapshot from %s: %s', snapshot_path, error)
+
+    return None
+
+
+def save_grade_hash(snapshot_path, exam_results):
+    snapshot_file = Path(snapshot_path)
+    snapshot_file.parent.mkdir(parents=True, exist_ok=True)
+    snapshot_file.write_text(hash_exam_results(exam_results), encoding='utf-8')
+
+
+def grades_changed(previous_results, current_results):
+    return previous_results != hash_exam_results(current_results)
+
+
+def webhook_delivery_succeeded(response):
+    return bool(response['payload'].get('id') or response['body_text'])
 
 
 def build_webhook_request_url(webhook_url, message_id=None):
@@ -244,33 +312,39 @@ def main():
         if results:
             logging.info(f"Successfully retrieved {len(results)} exam results")
 
+            grade_hash_path = os.environ.get('TIBROS_SCRAPER_STATE_PATH')
+            previous_results = load_grade_hash(grade_hash_path)
+
+            if previous_results is not None and not grades_changed(previous_results, results):
+                logging.info('No grade changes detected; skipping Discord notification')
+                return
+
             webhook_url = os.environ.get('DISCORD_WEBHOOK_URL')
-            webhook_message_id = os.environ.get('DISCORD_WEBHOOK_MESSAGE_ID')
+            discord_user_id = os.environ.get('DISCORD_USER_ID')
 
             if webhook_url:
-                payload = build_discord_payload(results)
-                response = send_discord_webhook(webhook_url, payload, webhook_message_id)
+                embed_payload = build_discord_payload(results)
+                embed_response = send_discord_webhook(webhook_url, embed_payload, os.environ.get('DISCORD_WEBHOOK_MESSAGE_ID'))
+                ping_response = {'payload': {}, 'body_text': ''}
 
-                if not response['payload'] and not response['body_text']:
+                if discord_user_id:
+                    ping_payload = build_discord_ping_payload(discord_user_id)
+                    ping_response = send_discord_webhook(webhook_url, ping_payload)
+
+                if not webhook_delivery_succeeded(embed_response) and (discord_user_id and not webhook_delivery_succeeded(ping_response)):
                     logging.warning('Discord webhook delivery failed')
-                elif webhook_message_id and response['status_code'] is None:
-                    logging.warning('Discord webhook edit failed; trying to create a new message instead')
-                    retry_response = send_discord_webhook(webhook_url, payload)
-
-                    if retry_response['payload'].get('id'):
-                        logging.info(
-                            'Discord message created successfully after edit fallback. Store DISCORD_WEBHOOK_MESSAGE_ID=%s to edit it next time.',
-                            retry_response['payload']['id'],
-                        )
-                    else:
-                        logging.warning('Discord webhook delivery failed')
-                elif not webhook_message_id and response['payload'].get('id'):
-                    logging.info(
-                        'Discord message created successfully. Store DISCORD_WEBHOOK_MESSAGE_ID=%s to edit it next time.',
-                        response['payload']['id'],
-                    )
                 else:
-                    logging.info('Discord webhook updated successfully')
+                    if webhook_delivery_succeeded(embed_response):
+                        logging.info('Discord embed updated successfully')
+                    else:
+                        logging.warning('Discord embed update failed')
+
+                    if webhook_delivery_succeeded(ping_response):
+                        logging.info('Discord ping sent successfully')
+                    else:
+                        logging.warning('Discord ping delivery failed')
+
+                save_grade_hash(grade_hash_path, results)
             else:
                 logging.warning('DISCORD_WEBHOOK_URL is not set; skipping Discord delivery')
         else:

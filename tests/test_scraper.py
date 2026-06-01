@@ -1,6 +1,6 @@
 from tibros_scraper import main
 
-from tibros_scraper.main import build_discord_payload, parse_exam_results
+from tibros_scraper.main import build_discord_payload, grades_changed, hash_exam_results, load_grade_hash, parse_exam_results, save_grade_hash
 
 def test_parse_exam_results_with_valid_data():
     """Test parsing of valid exam results HTML"""
@@ -99,6 +99,65 @@ def test_build_discord_payload_uses_labels_and_scores():
             'inline': True,
         },
     ]
+
+
+def test_build_discord_payload_can_ping_a_user():
+    results = [
+        {
+            'label': 'Konzeption und Administration von IT-Systemen',
+            'points': '92',
+            'mark': '1.0',
+        },
+    ]
+
+    payload = build_discord_payload(
+        results,
+        content='<@367690502432227329> Grades changed on IHK Berlin.',
+        allowed_mentions={'users': ['367690502432227329']},
+        timestamp='2026-06-01T15:45:00.000Z',
+    )
+
+    assert payload['content'] == '<@367690502432227329> Grades changed on IHK Berlin.'
+    assert payload['allowed_mentions'] == {'users': ['367690502432227329']}
+
+
+def test_grade_hash_round_trip_and_change_detection(tmp_path):
+    snapshot_path = tmp_path / 'grades.json'
+    previous_results = [
+        {
+            'label': 'Einrichten eines IT-gestützten Arbeitsplatzes',
+            'points': '85',
+            'mark': '2.0',
+        },
+        {
+            'label': 'Konzeption und Administration von IT-Systemen',
+            'points': '92',
+            'mark': '1.0',
+        },
+    ]
+
+    save_grade_hash(snapshot_path, previous_results)
+
+    loaded_results = load_grade_hash(snapshot_path)
+    expected_hash = hash_exam_results(previous_results)
+
+    assert loaded_results == expected_hash
+    assert grades_changed(loaded_results, previous_results) is False
+
+    updated_results = [
+        {
+            'label': 'Einrichten eines IT-gestützten Arbeitsplatzes',
+            'points': '88',
+            'mark': '2.0',
+        },
+        {
+            'label': 'Konzeption und Administration von IT-Systemen',
+            'points': '92',
+            'mark': '1.0',
+        },
+    ]
+
+    assert grades_changed(loaded_results, updated_results) is True
 
 
 def test_create_webdriver_uses_remote_selenium(monkeypatch):

@@ -12,3 +12,9 @@ services:
     env_file: tibros.env
     environment:
       SELENIUM_REMOTE_URL: http://selenium:4444
+      TIBROS_SCRAPER_STATE_PATH: /data/tibros_scraper_state.json
+    volumes:
+      - tibros_scraper_state:/data
+
+volumes:
+  tibros_scraper_state:
