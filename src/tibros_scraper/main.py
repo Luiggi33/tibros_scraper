@@ -18,7 +18,7 @@ from selenium.webdriver.support import expected_conditions as ec
 
 from bs4 import BeautifulSoup
 
-logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 IHK_RESULTS_URL = "https://apps.ihk-berlin.de/tibrosBB/BB_auszubildende.jsp"
 DISCORD_EMBED_COLOR = 5793266
