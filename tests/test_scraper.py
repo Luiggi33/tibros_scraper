@@ -1,6 +1,4 @@
-import pytest
-from bs4 import BeautifulSoup
-from tibros_scraper.main import parse_exam_results
+from tibros_scraper.main import build_discord_payload, parse_exam_results
 
 def test_parse_exam_results_with_valid_data():
     """Test parsing of valid exam results HTML"""
@@ -63,3 +61,39 @@ def test_parse_exam_results_with_no_table():
     results = parse_exam_results(html_content)
 
     assert results == []
+
+
+def test_build_discord_payload_uses_labels_and_scores():
+    results = [
+        {
+            'label': 'Einrichten eines IT-gestützten Arbeitsplatzes',
+            'points': '85',
+            'mark': '2.0',
+        },
+        {
+            'label': 'Konzeption und Administration von IT-Systemen',
+            'points': '92',
+            'mark': '1.0',
+        },
+    ]
+
+    payload = build_discord_payload(results, timestamp='2026-06-01T15:45:00.000Z')
+
+    embed = payload['embeds'][0]
+
+    assert embed['title'] == 'IHK Berlin | Prüfungsnoten'
+    assert embed['url'] == 'https://apps.ihk-berlin.de/tibrosBB/BB_auszubildende.jsp'
+    assert embed['color'] == 5793266
+    assert embed['timestamp'] == '2026-06-01T15:45:00.000Z'
+    assert embed['fields'] == [
+        {
+            'name': 'Einrichten eines IT-gestützten Arbeitsplatzes',
+            'value': 'Points: 85\nMark: 2.0',
+            'inline': True,
+        },
+        {
+            'name': 'Konzeption und Administration von IT-Systemen',
+            'value': 'Points: 92\nMark: 1.0',
+            'inline': True,
+        },
+    ]
