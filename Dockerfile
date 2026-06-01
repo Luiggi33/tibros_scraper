@@ -17,20 +17,17 @@ RUN ${POETRY_HOME}/bin/pip install "poetry==${POETRY_VERSION}"
 
 FROM python:3.12-bookworm AS production-image
 
+ENV SE_AVOID_STATS=true
+
 # Selenium
 ## Install Chrome and chromedriver (ensure required tools present)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        gnupg2 \
-        curl \
+        chromium \
+        chromium-driver \
         ca-certificates \
         wget \
         unzip \
-    && curl -sS https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor | tee /etc/apt/trusted.gpg.d/chrome.gpg > /dev/null \
-    && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        google-chrome-stable \
         fonts-liberation \
         libnss3 \
         libatk1.0-0 \
@@ -51,6 +48,9 @@ RUN apt-get update \
 ## Chromedriver is not preinstalled; Selenium Manager will fetch the correct driver at runtime
 
 WORKDIR /app
+
+ENV CHROME_BINARY_LOCATION=/usr/bin/chromium \
+    CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 # Install package and dependencies via pip directly from pyproject
 COPY pyproject.toml poetry.lock ./

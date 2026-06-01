@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 
@@ -149,6 +150,10 @@ def get_exam_results():
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0")
 
+    chrome_binary_location = os.environ.get('CHROME_BINARY_LOCATION')
+    if chrome_binary_location:
+        chrome_options.binary_location = chrome_binary_location
+
     username = os.environ.get('IHK_AZUBINUMBER')
     password = os.environ.get('IHK_AZUBIPASSWORD')
 
@@ -159,7 +164,13 @@ def get_exam_results():
     driver = None
     try:
         logging.info("Initializing Chrome driver")
-        driver = webdriver.Chrome(options=chrome_options)
+        chromedriver_path = os.environ.get('CHROMEDRIVER_PATH')
+        chrome_service = Service(chromedriver_path) if chromedriver_path else None
+
+        if chrome_service:
+            driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+        else:
+            driver = webdriver.Chrome(options=chrome_options)
 
         logging.info("Navigating to login page")
         driver.get(IHK_RESULTS_URL)
