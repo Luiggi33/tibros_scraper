@@ -14,35 +14,48 @@ RUN python -m venv ${POETRY_HOME}
 RUN ${POETRY_HOME}/bin/pip install -U pip setuptools
 RUN ${POETRY_HOME}/bin/pip install "poetry==${POETRY_VERSION}"
 
+
 FROM python:3.12-bookworm AS production-image
 
 # Selenium
+## Install Chrome and chromedriver (ensure required tools present)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gnupg2 \
+        curl \
+        ca-certificates \
+        wget \
+        unzip \
+    && curl -sS https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor | tee /etc/apt/trusted.gpg.d/chrome.gpg > /dev/null \
+    && echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        google-chrome-stable \
+        fonts-liberation \
+        libnss3 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libx11-xcb1 \
+        libxcb1 \
+        libxcomposite1 \
+        libxcursor1 \
+        libxdamage1 \
+        libxrandr2 \
+        libgbm1 \
+        libasound2 \
+        libpangocairo-1.0-0 \
+        libgtk-3-0 \
+        libxss1 \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sS -o - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor | tee /etc/apt/trusted.gpg.d/chrome.gpg \
-    && bash -c "echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' >> /etc/apt/sources.list.d/google-chrome.list" \
-    && apt -y update \
-    && apt -y install google-chrome-stable=136.0.7103.92-1 # for now this is pinned, i plan on making this better later :p
-
-RUN wget https://storage.googleapis.com/chrome-for-testing-public/136.0.7103.92/linux64/chromedriver-linux64.zip \
-    && unzip -j chromedriver-linux64.zip chromedriver-linux64/chromedriver -d /usr/local/bin/
-
-# Poetry
-
-ENV PATH="/opt/poetry/bin:$PATH" \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=1 \
-    POETRY_VIRTUALENVS_CREATE=1 \
-    POETRY_CACHE_DIR=/tmp/poetry_cache
-
-COPY --from=runtime /opt/poetry /opt/poetry/
+## Chromedriver is not preinstalled; Selenium Manager will fetch the correct driver at runtime
 
 WORKDIR /app
 
+# Install package and dependencies via pip directly from pyproject
 COPY pyproject.toml poetry.lock ./
-RUN touch README.md
+COPY README.md ./
+COPY src ./src
+RUN python -m pip install --no-cache-dir .
 
-RUN poetry install && rm -rf $POETRY_CACHE_DIR
-
-COPY src/tibros_scraper ./tibros_scraper
-
-ENTRYPOINT ["poetry", "run", "python", "-m", "tibros_scraper.main"]
+ENTRYPOINT ["python", "-m", "tibros_scraper.main"]

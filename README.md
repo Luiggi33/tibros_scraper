@@ -6,7 +6,7 @@ tibros scraper is a Python-based tool designed to scrape and parse exam results 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/tibros-scraper.git
+   git clone git@github.com:Luiggi33/tibros_scraper.git
    cd tibros-scraper
    ```
 
@@ -29,6 +29,11 @@ poetry run tibros_scraper
 ```
 
 This script will automatically log you in, fetch your exam results and display them inside the console. Further automation is soon to follow
+
+Or run directly without Poetry:
+```bash
+python -m tibros_scraper.main
+```
 
 ### Example Output
 ```
