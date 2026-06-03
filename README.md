@@ -40,7 +40,10 @@ Or run directly without Poetry:
 python -m tibros_scraper.main
 ```
 
-I personally use it with a cron job like this, to produce logs aswell as flock to prevent overlap:
+I personally use it in combination with the provided `docker-compose.yaml` aswell as the `run_scraper.sh` file that's ran on a cron schedule. This allows me to be up-to-date if the IHK finally provided me with my results.
+
+I use docker to keep the selenium running in its own space, aswell as only making it available to the scraper. In addition I use flock to protect against overlapping runs.
+
 ```bash
 */30 * * * * flock -n /tmp/tibros_scraper.lock /tibros_scraper/run_scraper.sh >> /var/log/tibros_scraper.log 2>&1
 ```
@@ -56,24 +59,23 @@ poetry run pytest -v
 
 The recommended container setup runs the scraper and a Selenium Chrome container together.
 
-1. Set the required environment variables:
+I would recommend that you use the provided `docker-compose.yaml` file with the example `tibros.env`.\
+To make running it even easier, you can use the `run_scraper.sh`, as it keeps the Selenium Chrome container running and only removes the scraper after it has done its job.
+
+1. Fill the `tibros.env` file with your credentials, Discord Webhook url and  Discord userid
+
+2. Allow execution of the `run_scraper.sh` file:
    ```bash
-   export IHK_AZUBINUMBER="your_username"
-   export IHK_AZUBIPASSWORD="your_password"
-   export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/.../..."
-   export DISCORD_USER_ID="367690502432227329"
+   sudo chmod +x run_scraper.sh
    ```
 
-   If you want change detection to survive container restarts, mount a volume and point `TIBROS_SCRAPER_STATE_PATH` at a file inside it.
-
-2. Start both containers:
+3. Run the `run_scraper.sh` file:
    ```bash
-   docker compose up --build
+   ./run_scraper.sh
    ```
 
-   The scraper container connects to the Selenium container through `SELENIUM_REMOTE_URL=http://selenium:4444`.
+4. If this is your first run, add the Discord message id to the `tibros.env` to keep that message up to date and prevent unnecessary resends.
 
-If you run the scraper image against a Selenium service of your own, set `SELENIUM_REMOTE_URL` to that service's address. Outside Docker, if `SELENIUM_REMOTE_URL` is not set, the scraper falls back to a local Chrome driver.
 
 ## License
 
