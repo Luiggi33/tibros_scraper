@@ -40,8 +40,10 @@ Or run directly without Poetry:
 python -m tibros_scraper.main
 ```
 
-The Discord message uses the exam label as the field name and combines points and mark in the field value.
-The first successful run stores a hash of the current grades and does not ping anyone yet; later runs only notify on changes.
+I personally use it with a cron job like this, to produce logs aswell as flock to prevent overlap:
+```bash
+*/30 * * * * flock -n /tmp/tibros_scraper.lock /tibros_scraper/run_scraper.sh >> /var/log/tibros_scraper.log 2>&1
+```
 
 ## Testing
 
