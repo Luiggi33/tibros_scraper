@@ -5,7 +5,7 @@ import hashlib
 import time
 from pathlib import Path
 from datetime import datetime, timezone
-from urllib.parse import urlencode, urlsplit, urlunsplit
+from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -242,6 +242,30 @@ def parse_exam_results(html_content):
     return exam_results
 
 
+def find_exam_results_link(html_content):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    result_links = []
+
+    for link in soup.find_all('a', href=True):
+        href = link['href']
+
+        if 'azubiErgebnisse.jsp' not in href:
+            continue
+
+        row = link.find_parent('div', class_='reihe')
+        row_text = row.get_text(' ', strip=True) if row else link.get_text(strip=True)
+        result_links.append((row_text, href))
+
+    if not result_links:
+        return None
+
+    for row_text, href in result_links:
+        if 'AP Teil 2' in row_text:
+            return href
+
+    return result_links[0][1]
+
+
 def get_exam_results():
     username = os.environ.get('IHK_AZUBINUMBER')
     password = os.environ.get('IHK_AZUBIPASSWORD')
@@ -279,10 +303,14 @@ def get_exam_results():
         )
         exam_link.click()
 
-        results_link = WebDriverWait(driver, 10).until(
-            ec.presence_of_element_located((By.XPATH, "//a[contains(@href, 'azubiErgebnisse.jsp')]"))
-        )
-        results_link.click()
+        results_link_href = find_exam_results_link(driver.page_source)
+
+        if not results_link_href:
+            logging.warning('No exam results link found on overview page')
+            return []
+
+        logging.info('Opening exam results link: %s', results_link_href)
+        driver.get(urljoin(driver.current_url, results_link_href))
 
         time.sleep(2)
 
