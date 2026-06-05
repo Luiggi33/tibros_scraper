@@ -65,7 +65,7 @@ def test_parse_exam_results_with_no_table():
     assert results == []
 
 
-def test_find_exam_results_link_prefers_ap2_when_present():
+def test_find_exam_results_link_prefers_highest_id_when_present():
     html_content = """
     <div class='reihe'>
         <div class='row '>
@@ -92,21 +92,29 @@ def test_find_exam_results_link_prefers_ap2_when_present():
     assert find_exam_results_link(html_content) == 'azubiErgebnisse.jsp?id=1'
 
 
-def test_find_exam_results_link_falls_back_to_ap1_when_ap2_is_missing():
+def test_find_exam_results_link_chooses_highest_id_even_when_links_are_out_of_order():
     html_content = """
     <div class='reihe'>
-        <div class='row '>
-            <div class='input-wrapper col-sm-12 col-md-3'>Prüfungsart: </div>
-            <div class='input-wrapper col-sm-12 col-md-9'>gestreckte Prüfung (AP Teil 1)</div>
-        </div>
         <div class='row '>
             <div class='input-wrapper col-sm-12 col-md-3'>Ergebnisse: </div>
             <div class='input-wrapper col-sm-12 col-md-9'><a href='azubiErgebnisse.jsp?id=0'>Ergebnisse</a></div>
         </div>
     </div>
+    <div class='reihe'>
+        <div class='row '>
+            <div class='input-wrapper col-sm-12 col-md-3'>Ergebnisse: </div>
+            <div class='input-wrapper col-sm-12 col-md-9'><a href='azubiErgebnisse.jsp?id=2'>Ergebnisse</a></div>
+        </div>
+    </div>
+    <div class='reihe'>
+        <div class='row '>
+            <div class='input-wrapper col-sm-12 col-md-3'>Ergebnisse: </div>
+            <div class='input-wrapper col-sm-12 col-md-9'><a href='azubiErgebnisse.jsp?id=1'>Ergebnisse</a></div>
+        </div>
+    </div>
     """
 
-    assert find_exam_results_link(html_content) == 'azubiErgebnisse.jsp?id=0'
+    assert find_exam_results_link(html_content) == 'azubiErgebnisse.jsp?id=2'
 
 
 def test_build_discord_payload_uses_labels_and_scores():

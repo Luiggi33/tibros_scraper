@@ -5,7 +5,7 @@ import hashlib
 import time
 from pathlib import Path
 from datetime import datetime, timezone
-from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
+from urllib.parse import parse_qs, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -252,18 +252,24 @@ def find_exam_results_link(html_content):
         if 'azubiErgebnisse.jsp' not in href:
             continue
 
-        row = link.find_parent('div', class_='reihe')
-        row_text = row.get_text(' ', strip=True) if row else link.get_text(strip=True)
-        result_links.append((row_text, href))
+        parsed_href = urlsplit(href)
+        query_params = parse_qs(parsed_href.query)
+        result_id_values = query_params.get('id', [])
+
+        if not result_id_values:
+            continue
+
+        try:
+            result_id = int(result_id_values[0])
+        except ValueError:
+            continue
+
+        result_links.append((result_id, href))
 
     if not result_links:
         return None
 
-    for row_text, href in result_links:
-        if 'AP Teil 2' in row_text:
-            return href
-
-    return result_links[0][1]
+    return max(result_links, key=lambda item: item[0])[1]
 
 
 def get_exam_results():
